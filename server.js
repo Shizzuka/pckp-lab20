@@ -4,53 +4,64 @@ const fs = require('fs/promises');
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
+// Порт должен быть динамическим для Vercel/Heroku
+const PORT = process.env.PORT || 3000;
 const dataFile = path.join(__dirname, 'contacts.json');
 
-// Настройка статики 
+// Настройка статики
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 
-// Настройка шаблонизатора [cite: 30, 32]
+// Настройка шаблонизатора
 app.engine('hbs', engine({
     extname: 'hbs',
-    defaultLayout: 'main', // Общий макет 
+    defaultLayout: 'main',
+    // Явное указание пути к partials для корректной работы в облаке
+    partialsDir: path.join(__dirname, 'views/partials'),
     helpers: {
-        cancelButton: () => '<a href="/" class="btn">Отказаться</a>' // Хелпер 
+        cancelButton: () => '<a href="/" class="btn">Отказаться</a>'
     }
 }));
 app.set('view engine', 'hbs');
-app.set('views', './views');
+// Явное указание пути к папке views
+app.set('views', path.join(__dirname, 'views'));
 
-// Утилита для чтения/записи JSON
+// Утилита для чтения/записи JSON с обработкой ошибок
 async function getContacts() {
-    const data = await fs.readFile(dataFile, 'utf-8');
-    return JSON.parse(data);
+    try {
+        const data = await fs.readFile(dataFile, 'utf-8');
+        return JSON.parse(data);
+    } catch (error) {
+        // Если файла нет или он пустой, возвращаем пустой массив
+        return [];
+    }
 }
 async function saveContacts(contacts) {
     await fs.writeFile(dataFile, JSON.stringify(contacts, null, 2));
 }
 
-// GET:/ [cite: 8, 26, 28]
+// GET:/
 app.get('/', async (req, res) => {
     const contacts = await getContacts();
     res.render('index', { contacts, isMain: true });
 });
 
-// GET:/Add [cite: 12, 26, 28]
+// GET:/Add
 app.get('/Add', async (req, res) => {
     const contacts = await getContacts();
-    res.render('add', { contacts, isAdd: true }); // Строки-кнопки будут заблокированы [cite: 17]
+    res.render('add', { contacts, isAdd: true }); 
 });
 
-// GET:/Update [cite: 18, 20, 26, 28]
+// GET:/Update
 app.get('/Update', async (req, res) => {
     const contacts = await getContacts();
     const contact = contacts.find(c => c.id === req.query.id);
+    // Если контакт не найден, возвращаемся на главную
+    if (!contact) return res.redirect('/');
     res.render('update', { contacts, isUpdate: true, contact });
 });
 
-// POST:/Add [cite: 15, 26]
+// POST:/Add
 app.post('/Add', async (req, res) => {
     const contacts = await getContacts();
     const newContact = {
@@ -63,7 +74,7 @@ app.post('/Add', async (req, res) => {
     res.redirect('/');
 });
 
-// POST:/Update [cite: 21, 26]
+// POST:/Update
 app.post('/Update', async (req, res) => {
     const contacts = await getContacts();
     const index = contacts.findIndex(c => c.id === req.body.id);
@@ -75,7 +86,7 @@ app.post('/Update', async (req, res) => {
     res.redirect('/');
 });
 
-// POST:/Delete [cite: 23, 26]
+// POST:/Delete
 app.post('/Delete', async (req, res) => {
     let contacts = await getContacts();
     contacts = contacts.filter(c => c.id !== req.body.id);
@@ -83,4 +94,4 @@ app.post('/Delete', async (req, res) => {
     res.redirect('/');
 });
 
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`)); // Слушает порт 3000 [cite: 5]
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
