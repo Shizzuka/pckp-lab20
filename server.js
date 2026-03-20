@@ -8,6 +8,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const dataFile = path.join(__dirname, 'contacts.json');
 
+// Переменная для хранения данных в памяти (для Vercel, где FS только для чтения)
+let memoryContacts = null;
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 
@@ -22,17 +25,33 @@ app.engine('hbs', engine({
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'views'));
 
+// Универсальная функция получения данных
 async function getContacts() {
+    // Если мы на Vercel и данные уже есть в памяти — берем их
+    if (memoryContacts !== null) return memoryContacts;
+
     try {
         const data = await fs.readFile(dataFile, 'utf-8');
-        return JSON.parse(data);
+        memoryContacts = JSON.parse(data);
+        return memoryContacts;
     } catch (error) {
-        
+        memoryContacts = [];
         return [];
     }
 }
+
+// Универсальная функция сохранения
 async function saveContacts(contacts) {
-    await fs.writeFile(dataFile, JSON.stringify(contacts, null, 2));
+    memoryContacts = contacts;
+    
+    // Пытаемся записать в файл только если мы НЕ в облаке (проверка на Vercel)
+    if (!process.env.VERCEL) {
+        try {
+            await fs.writeFile(dataFile, JSON.stringify(contacts, null, 2));
+        } catch (error) {
+            console.error("Ошибка записи файла (локально):", error);
+        }
+    }
 }
 
 app.get('/', async (req, res) => {
@@ -48,39 +67,50 @@ app.get('/Add', async (req, res) => {
 app.get('/Update', async (req, res) => {
     const contacts = await getContacts();
     const contact = contacts.find(c => c.id === req.query.id);
-    // Если контакт не найден, возвращаемся на главную
     if (!contact) return res.redirect('/');
     res.render('update', { contacts, isUpdate: true, contact });
 });
 
 app.post('/Add', async (req, res) => {
-    const contacts = await getContacts();
-    const newContact = {
-        id: Date.now().toString(),
-        name: req.body.name,
-        phone: req.body.phone
-    };
-    contacts.push(newContact);
-    await saveContacts(contacts);
-    res.redirect('/');
+    try {
+        const contacts = await getContacts();
+        const newContact = {
+            id: Date.now().toString(),
+            name: req.body.name,
+            phone: req.body.phone
+        };
+        contacts.push(newContact);
+        await saveContacts(contacts);
+        res.redirect('/');
+    } catch (e) {
+        res.status(500).send("Ошибка при добавлении");
+    }
 });
 
 app.post('/Update', async (req, res) => {
-    const contacts = await getContacts();
-    const index = contacts.findIndex(c => c.id === req.body.id);
-    if (index !== -1) {
-        contacts[index].name = req.body.name;
-        contacts[index].phone = req.body.phone;
-        await saveContacts(contacts);
+    try {
+        const contacts = await getContacts();
+        const index = contacts.findIndex(c => c.id === req.body.id);
+        if (index !== -1) {
+            contacts[index].name = req.body.name;
+            contacts[index].phone = req.body.phone;
+            await saveContacts(contacts);
+        }
+        res.redirect('/');
+    } catch (e) {
+        res.status(500).send("Ошибка при обновлении");
     }
-    res.redirect('/');
 });
 
 app.post('/Delete', async (req, res) => {
-    let contacts = await getContacts();
-    contacts = contacts.filter(c => c.id !== req.body.id);
-    await saveContacts(contacts);
-    res.redirect('/');
+    try {
+        let contacts = await getContacts();
+        contacts = contacts.filter(c => c.id !== req.body.id);
+        await saveContacts(contacts);
+        res.redirect('/');
+    } catch (e) {
+        res.status(500).send("Ошибка при удалении");
+    }
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
