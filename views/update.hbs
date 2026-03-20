@@ -1,0 +1,12 @@
+{{> contactList isUpdate=true}}
+<form method="POST">
+    <input type="hidden" name="id" value="{{contact.id}}">
+    <div class="form-group">
+        <input type="text" name="name" value="{{contact.name}}" class="edit-input" required>
+        <input type="text" name="phone" value="{{contact.phone}}" class="edit-input" required>
+    </div>
+    <div class="btn-group">
+        <button type="submit" formaction="/Update" class="btn">Изменить</button>
+        <button type="submit" formaction="/Delete" class="btn" id="deleteBtn">Удалить</button>
+        {{{cancelButton}}} </div>
+</form>

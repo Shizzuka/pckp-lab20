@@ -1,0 +1,12 @@
+body { background-color: #ffffff; color: #333333; font-family: Arial, sans-serif; padding: 20px; margin: 0; }
+.container { max-width: 600px; margin: 0 auto; border: 2px solid #333; padding: 20px; background: #fff; }
+.contact-list { margin-bottom: 20px; border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: auto; }
+.contact-row { display: flex; justify-content: space-between; padding: 10px; margin-bottom: 5px; background-color: #f0f0f0; border: 1px solid #ccc; text-decoration: none; color: #333; }
+.contact-row:hover { background-color: #e0e0e0; }
+.contact-row.disabled { pointer-events: none; opacity: 0.6; }
+.form-group { display: flex; gap: 10px; margin-bottom: 10px; }
+.form-group input { flex: 1; padding: 8px; border: 1px solid #ccc; background: #fff; }
+.btn-group { display: flex; gap: 10px; }
+.btn { padding: 10px 20px; border: 1px solid #333; background-color: #f9f9f9; cursor: pointer; text-decoration: none; color: #333; text-align: center; }
+.btn:hover { background-color: #e0e0e0; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
